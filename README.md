@@ -1,6 +1,6 @@
 # Vostraslater
 
-Vostra AI es una plataforma de inteligencia artificial moderna diseñada para ejecutar modelos de lenguaje de forma local mediante Ollama, incorporando además capacidades avanzadas de transcripción de audio utilizando Faster-Whisper.
+Vostraslater AI es una plataforma de inteligencia artificial moderna diseñada para ejecutar modelos de lenguaje de forma local mediante Ollama, incorporando además capacidades avanzadas de transcripción de audio utilizando Faster-Whisper.
 
 El proyecto combina una interfaz moderna desarrollada con Next.js y React, junto con servicios de procesamiento de IA que permiten interactuar mediante texto y voz, ofreciendo una experiencia similar a los asistentes conversacionales modernos pero con control total sobre los datos y la infraestructura.
 
