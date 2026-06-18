@@ -106,7 +106,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative flex flex-col items-center min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-zinc-900 to-slate-950">
+    <div className="relative flex flex-col items-center min-h-screen overflow-hidden bg-linear-to-br from-slate-950 via-zinc-900 to-slate-950">
       {/* Fondo */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
@@ -116,7 +116,7 @@ export default function Home() {
 
       {/* Header */}
       <div className="relative z-10 mt-10 mb-6 text-center">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+        <h1 className="text-5xl font-bold bg-linear-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
           Vostraslater
         </h1>
       </div>
@@ -144,7 +144,7 @@ export default function Home() {
             >
               <div
                 className={`max-w-[80%] rounded-3xl px-5 py-4 shadow-lg ${message.role === "user"
-                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  ? "bg-linear-to-r from-blue-500 to-cyan-500 text-white"
                   : "bg-white/10 backdrop-blur-md border border-white/10 text-zinc-100"
                   }`}
               >
@@ -196,7 +196,7 @@ export default function Home() {
             <button
               onClick={handleButton}
               disabled={loading}
-              className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white transition hover:scale-105 disabled:opacity-50"
+              className="flex items-center justify-center h-12 w-12 rounded-xl bg-linear-to-r from-cyan-500 to-blue-500 text-white transition hover:scale-105 disabled:opacity-50"
             >
               <SendHorizontal size={20} />
             </button>
