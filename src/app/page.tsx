@@ -1,65 +1,225 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { SendHorizontal, Paperclip } from "lucide-react";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export default function Home() {
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<
+    { role: "user" | "assistant"; content: string }[]
+  >([]);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+
+  const handleButton = async () => {
+    if (!prompt.trim()) return;
+
+    const userMessage = {
+      role: "user" as const,
+      content: prompt,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+
+    const currentPrompt = prompt;
+    setPrompt("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: currentPrompt,
+        }),
+      });
+
+      const data = await res.json();
+
+      const assistantMessage = {
+        role: "assistant" as const,
+        content: data.response,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error(error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "❌ Error al conectar con Ollama",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAudioUpload = async (file: File) => {
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(
+        "http://localhost:8000/transcribe",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      console.log("STATUS:", res.status);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `🎤 ${data.text}`,
+        },
+      ]);
+    } catch (error) {
+      console.error(error);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "❌ Error al transcribir audio",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="relative flex flex-col items-center min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-zinc-900 to-slate-950">
+      {/* Fondo */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-20 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute bottom-20 right-20 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-3xl" />
+      </div>
+
+      {/* Header */}
+      <div className="relative z-10 mt-10 mb-6 text-center">
+        <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+          Vostra AI
+        </h1>
+
+        <p className="mt-2 text-zinc-400">Powered by Ollama</p>
+      </div>
+
+      {/* Chat */}
+      <div className="relative z-10 flex flex-col w-full max-w-4xl h-[75vh] rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl overflow-hidden">
+        {/* Mensajes */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {messages.length === 0 && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <h2 className="text-2xl font-semibold text-white">
+                  ¿Qué quieres crear hoy?
+                </h2>
+                <p className="text-zinc-400 mt-2">Pregúntame cualquier cosa.</p>
+              </div>
+            </div>
+          )}
+
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
+                }`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <div
+                className={`max-w-[80%] rounded-3xl px-5 py-4 shadow-lg ${message.role === "user"
+                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                  : "bg-white/10 backdrop-blur-md border border-white/10 text-zinc-100"
+                  }`}
+              >
+                {message.role === "assistant" ? (
+                  <article className="prose prose-invert max-w-none">
+                    <MarkdownRenderer content={message.content} />
+                  </article>
+                ) : (
+                  <p>{message.content}</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-white/10 border border-white/10 backdrop-blur-md rounded-3xl px-5 py-4">
+                <div className="flex gap-2">
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce"></span>
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce delay-100"></span>
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce delay-200"></span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {/* Input */}
+        <div className="border-t border-white/10 p-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-3">
+            <input
+              type="text"
+              placeholder="Escribe un mensaje..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleButton();
+              }}
+              className="flex-1 bg-transparent outline-none text-white placeholder:text-zinc-500"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            <label
+              htmlFor="audio-upload"
+              className="flex items-center justify-center h-12 w-12 cursor-pointer rounded-xl border border-white/10 bg-white/10 text-white transition hover:bg-white/20"
+            >
+              <Paperclip size={18} />
+            </label>
+
+            <button
+              onClick={handleButton}
+              disabled={loading}
+              className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white transition hover:scale-105 disabled:opacity-50"
+            >
+              <SendHorizontal size={20} />
+            </button>
+
+            <input
+              id="audio-upload"
+              type="file"
+              accept=".mp3,.wav,.m4a,.ogg,audio/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+
+                if (!file) return;
+
+                setAudioFile(file);
+                handleAudioUpload(file);
+              }}
+            />
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
