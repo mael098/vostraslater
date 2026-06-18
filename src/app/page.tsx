@@ -117,10 +117,8 @@ export default function Home() {
       {/* Header */}
       <div className="relative z-10 mt-10 mb-6 text-center">
         <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400 bg-clip-text text-transparent">
-          Vostra AI
+          Vostraslater
         </h1>
-
-        <p className="mt-2 text-zinc-400">Powered by Ollama</p>
       </div>
 
       {/* Chat */}
