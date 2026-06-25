@@ -13,18 +13,24 @@ export default function Home() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
   const handleButton = async () => {
-    if (!prompt.trim()) return;
-
-    const userMessage = {
-      role: "user" as const,
-      content: prompt,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    if (!prompt.trim() || loading) return;
 
     const currentPrompt = prompt;
+
     setPrompt("");
     setLoading(true);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: currentPrompt,
+      },
+      {
+        role: "assistant",
+        content: "",
+      },
+    ]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -37,29 +43,103 @@ export default function Home() {
         }),
       });
 
-      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
-      const assistantMessage = {
-        role: "assistant" as const,
-        content: data.response,
-      };
+      if (!res.body) {
+        throw new Error("No stream disponible");
+      }
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      let assistantText = "";
+      let buffer = "";
+      let firstToken = true;
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, {
+          stream: true,
+        });
+
+        const lines = buffer.split("\n");
+
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const json = JSON.parse(line);
+
+            if (json.response) {
+              assistantText += json.response;
+
+              if (firstToken) {
+                setLoading(false);
+                firstToken = false;
+              }
+
+              setMessages((prev) => {
+                const copy = [...prev];
+
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: assistantText,
+                };
+
+                return copy;
+              });
+            }
+          } catch (err) {
+            console.error("Error parsing chunk:", err);
+          }
+        }
+      }
+
+      // Procesar último fragmento pendiente
+      if (buffer.trim()) {
+        try {
+          const json = JSON.parse(buffer);
+
+          if (json.response) {
+            assistantText += json.response;
+
+            setMessages((prev) => {
+              const copy = [...prev];
+
+              copy[copy.length - 1] = {
+                role: "assistant",
+                content: assistantText,
+              };
+
+              return copy;
+            });
+          }
+        } catch {}
+      }
     } catch (error) {
       console.error(error);
 
-      setMessages((prev) => [
-        ...prev,
-        {
+      setMessages((prev) => {
+        const copy = [...prev];
+
+        copy[copy.length - 1] = {
           role: "assistant",
           content: "❌ Error al conectar con Ollama",
-        },
-      ]);
+        };
+
+        return copy;
+      });
     } finally {
       setLoading(false);
     }
   };
-
   const handleAudioUpload = async (file: File) => {
     try {
       setLoading(true);
@@ -67,13 +147,10 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(
-        "http://localhost:8000/transcribe",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const res = await fetch("http://localhost:8000/transcribe", {
+        method: "POST",
+        body: formData,
+      });
 
       console.log("STATUS:", res.status);
 
@@ -139,14 +216,16 @@ export default function Home() {
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"
-                }`}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div
-                className={`max-w-[80%] rounded-3xl px-5 py-4 shadow-lg ${message.role === "user"
-                  ? "bg-linear-to-r from-blue-500 to-cyan-500 text-white"
-                  : "bg-white/10 backdrop-blur-md border border-white/10 text-zinc-100"
-                  }`}
+                className={`max-w-[80%] rounded-3xl px-5 py-4 shadow-lg ${
+                  message.role === "user"
+                    ? "bg-linear-to-r from-blue-500 to-cyan-500 text-white"
+                    : "bg-white/10 backdrop-blur-md border border-white/10 text-zinc-100"
+                }`}
               >
                 {message.role === "assistant" ? (
                   <article className="prose prose-invert max-w-none">
